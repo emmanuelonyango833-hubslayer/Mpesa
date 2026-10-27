@@ -1,58 +1,74 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DashPay M-Pesa - Ruiru Exchange</title>
-<link rel="manifest" href="manifest.json">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DashPay Ruiru - Live Price</title>
+<link rel="manifest" href="./manifest.json">
 <style>
-body{font-family:system-ui;background:#0d1117;color:white;padding:15px;text-align:center}
-.card{background:#161b22;padding:18px;border-radius:16px;margin:12px 0;text-align:left}
-input{width:92%;padding:14px;border-radius:10px;border:1px solid #30363d;background:#0d1117;color:white;font-size:16px;margin:8px 0}
-button{background:#00a651;color:white;padding:15px;border:none;border-radius:10px;font-size:17px;width:100%;font-weight:bold}
-.fee{color:#f0883e;font-size:13px}
-.seller{background:#0d253f;border:1px solid #1f6feb;border-radius:12px;padding:12px;text-align:center}
-.kes{font-size:26px;color:#58a6ff;font-weight:bold}
+*{box-sizing:border-box}body{font-family:system-ui;margin:0;background:#fff8f0;display:flex;justify-content:center;padding:15px}
+.card{width:100%;max-width:400px;background:white;padding:22px;border-radius:20px;box-shadow:0 8px 30px rgba(0,0,0,.1);border-top:6px solid #f7931e}
+h2{margin:0}.live{font-size:12px;color:green;background:#e6f9e6;padding:5px 10px;border-radius:20px;display:inline-block;margin:5px 0}
+input,button{width:100%;padding:15px;margin-top:8px;border-radius:12px;border:1.5px solid #ddd;font-size:16px}
+button{background:#f7931e;color:white;font-weight:800;border:none}
+.box{background:#f9f9f9;padding:14px;border-radius:12px;margin:15px 0;display:flex;justify-content:space-between}
+#status{margin-top:15px;padding:12px;border-radius:10px;font-size:14px;display:none}
 </style>
 </head>
 <body>
-<img src="icon.png" width="85" style="border-radius:18px">
-<h2>Dash → M-Pesa</h2>
-<small>Ruiru Fast Exchange | 0142929374</small>
-
 <div class="card">
-<label>Customer M-Pesa Number</label>
-<input id="phone" placeholder="07xx or 01xx">
-<label>Dash Amount Customer Sends</label>
-<input id="dash" type="number" step="0.01" placeholder="e.g. 1.5" oninput="calc()">
+<h2>⚡ DashPay Ruiru</h2>
+<div id="price" class="live">Loading live Dash price...</div>
+<p style="font-size:13px;color:#666">Business: 0142929374 • Fee 5%</p>
 
-<div class="kes" id="totalKes">0 KES</div>
-<div class="fee" id="feeInfo"></div>
-<div style="margin-top:8px">Customer will RECEIVE: <b id="receive" style="color:#3fb950">0 KES</b></div>
+<label>M-Pesa Account Number</label>
+<input id="mpesa" type="tel" placeholder="07XXXXXXXX">
 
-<button onclick="sendMpesa()" style="margin-top:12px">SEND TO M-PESA ACCOUNT</button>
-<p id="status" style="font-size:13px;color:#8b949e"></p>
+<label>Dash Amount</label>
+<input id="dash" type="number" placeholder="e.g. 0.5" oninput="calc()" step="0.0001">
+
+<div class="box">
+<div><small>Fee 5%</small><br><b id="fee">0 KES</b></div>
+<div style="text-align:right"><small>You Send</small><br><b id="kes" style="color:#0a8a0a">0 KES</b></div>
 </div>
 
-<div class="seller">
-<b>Exchange Owner: 0142929374</b><br>
-<small>Fee: 5% | Powered by DashPay</small><br>
-<a id="waLink" href="https://wa.me/254142929374"><button style="background:#25D366;margin-top:10px">Contact Seller on WhatsApp</button></a>
+<button onclick="send()">SEND TO M-PESA ACCOUNT</button>
+<div id="status"></div>
+<a href="https://wa.me/2541142929374" style="display:block;text-align:center;margin-top:15px;color:#25D366;font-weight:600;text-decoration:none">WhatsApp Support</a>
 </div>
 
 <script>
-const SELLER_PHONE = "0142929374";
-const COMMISSION = 0.05; // 5%
-const KOTANI_KEY = "PASTE_YOUR_KEY_HERE"; // Get from kotanipay.com/dashboard
-let rate = 3500;
+let DASH_RATE = 2500; // fallback
 
-fetch('https://api.coingecko.com/api/v3/simple/price?ids=dash&vs_currencies=kes')
-.then(r=>r.json()).then(j=>{ if(j.dash?.kes) rate=j.dash.kes; calc(); });
+// LIVE PRICE FROM YOUR LINK
+async function loadPrice(){
+ try{
+  const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=dash&vs_currencies=kes');
+  const data = await res.json();
+  DASH_RATE = data.dash.kes;
+  document.getElementById('price').innerText = `● LIVE: 1 DASH = ${DASH_RATE.toLocaleString()} KES`;
+  calc();
+ }catch(e){
+  document.getElementById('price').innerText = `Using default: 1 DASH = ${DASH_RATE} KES (offline)`;
+ }
+}
+loadPrice();
 
 function calc(){
  let d = parseFloat(document.getElementById('dash').value)||0;
- let total = d * rate;
- let fee = total * COMMISSION;
- let receive = total - fee;
- document.getElementById
+ let total = d * DASH_RATE;
+ let fee = total*0.05;
+ document.getElementById('fee').innerText = fee.toFixed(2)+' KES';
+ document.getElementById('kes').innerText = (total-fee).toFixed(2)+' KES';
+}
+function send(){
+ let m=document.getElementById('mpesa').value;
+ let d=document.getElementById('dash').value;
+ let box=document.getElementById('status');
+ if(m.length<10||!d){box.style.display='block';box.style.background='#ffe0e0';box.innerText='Enter M-Pesa and Dash';return;}
+ box.style.display='block';box.style.background='#e6f9e6';box.style.border='1px solid #b5e6b5';
+ box.innerHTML=`✅ LIVE Order<br>M-Pesa: ${m}<br>Amount: ${document.getElementById('kes').innerText}<br><br>Customer sends ${d} DASH to:<br><code>YOUR_DASH_ADDRESS</code><br><br>Then you send M-Pesa from 0142929374`;
+}
+</script>
+</body>
+</html>
